@@ -6,15 +6,12 @@
 
 打开 **[index.html](./index.html)**（浏览器直接运行），填入参数 → 点生成 → 把生成的文档贴给 cto.new 的 AI agent 执行。
 
-或命令行运行 `bash generate.sh`，交互式问答后输出 `deploy-日期.md`。
-
 ## 文件说明
 
 | 文件 | 用途 |
 |:---|:---|
 | `index.html` | **在线生成器**（浏览器打开，填参数 → 复制 → 贴给 agent） |
-| `generate.sh` | CLI 版生成器（交互式问答，输出 deploy.md） |
-| `install.sh` | 部署脚本（install.sh 本身，被生成文档引用） |
+| `install.sh` | 部署脚本（被生成文档引用） |
 | `app.env.example` | 环境变量模板（`__CF_TOKEN__` 等替换为实际值） |
 | `kpal-deploy.sh` | 保活脚本模板（可选） |
 
