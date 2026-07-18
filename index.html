@@ -122,11 +122,11 @@ function generate(){
   md+='sleep 2\ncurl -s -u ${TTYD_AUTH} -o /dev/null -w "ttyd: %{http_code}\\n" http://127.0.0.1:${TTYD_PORT}/\n```\n\n'
 
   if(komari){
-    md+='## （可选）安装 komari\n\n对 agent 说：\n\n```\nbash -c \''+komari+'\'\n```\n\n'
+    md+='## （可选）安装 komari\n\n```\nbash -c \''+komari+'\'\n```\n\n'
   }
 
-  md+='## 步骤 3：执行安装\n\n对 agent 说：\n\n```\nbash /home/team/shared/install.sh\n```\n\n'
-  md+='## 步骤 4：验证\n\n对 agent 说：\n\n```\nsupervisorctl status\n'
+  md+='## 步骤 3：执行安装\n\n```\nbash /home/team/shared/install.sh\n```\n\n'
+  md+='## 步骤 4：验证\n\n```\nsupervisorctl status\n'
   md+='curl -s -u '+auth+' -o /dev/null -w "ttyd: %{http_code}\\n" http://127.0.0.1:'+port+'/\n```\n'
 
   document.getElementById('output').value=md
