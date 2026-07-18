@@ -109,8 +109,9 @@ curl -s -u ${TTYD_AUTH} -o /dev/null -w "ttyd: %{http_code}\n" http://127.0.0.1:
 |:---|:---|
 | `install.sh` | 部署脚本（下载 ttyd + cloudflared，安装 supervisor，启动服务） |
 | `app.env.example` | 环境变量模板（部署前复制为 `app.env` 并填入实际值） |
+| `index.html` | **在线生成器**（浏览器打开，填参数→复制→贴给 cto agent） |
+| `generate.sh` | CLI 版生成器（交互式问答，输出 deploy.md） |
 | `kpal-deploy.sh` | 保活脚本模板（可选，配入 supervisor 后定时请求防 cto 沙盒休眠） |
-| `generate.sh` | 交互式生成器（问答式输入参数，自动生成 deploy.md 直接给 cto agent） |
 
 ## 进程管理
 
