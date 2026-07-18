@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zvps — cto.new 部署文档生成器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:800px;margin:0 auto}
+h1{font-size:20px;margin-bottom:4px;color:#f0f6fc}
+p.sub{color:#8b949e;font-size:13px;margin-bottom:24px}
+label{display:block;font-size:13px;color:#8b949e;margin-top:14px;margin-bottom:4px}
+input,textarea{width:100%;background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:8px 12px;border-radius:6px;font-size:14px;font-family:ui-monospace,monospace}
+input:focus,textarea:focus{outline:none;border-color:#58a6ff}
+textarea{min-height:200px;resize:vertical;margin-top:10px}
+.btn{background:#238636;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:14px;cursor:pointer;margin-top:16px;font-weight:500}
+.btn:hover{background:#2ea043}
+.btn.copy{background:#1f6feb;margin-left:8px}
+.btn.copy:active{background:#388bfd}
+.row{display:flex;gap:8px;align-items:center}
+.row textarea{flex:1}
+.error{color:#f85149;font-size:12px;margin-top:4px;display:none}
+.hint{color:#8b949e;font-size:12px;margin-top:2px}
+kbd{background:#21262d;padding:1px 5px;border-radius:3px;font-size:11px;border:1px solid #30363d}
+</style>
+</head>
+<body>
+
+<h1>zvps 部署文档生成器</h1>
+<p class="sub">填入参数，一键生成给 cto.new AI agent 的部署文档</p>
+
+<label>CF_TOKEN <span style="color:#f85149">*</span></label>
+<input id="cfToken" placeholder="eyJhIjoi... " spellcheck="false">
+<div class="error" id="errToken">CF_TOKEN 不能为空</div>
+
+<label>TTYD_PORT <span style="color:#8b949e">（默认 7681）</span></label>
+<input id="ttydPort" value="7681" placeholder="7681" spellcheck="false">
+
+<label>TTYD_AUTH <span style="color:#f85149">*</span> <span style="color:#8b949e">（格式 用户名:密码）</span></label>
+<input id="ttydAuth" placeholder="admin:mysecret" spellcheck="false">
+<div class="error" id="errAuth">TTYD_AUTH 不能为空</div>
+
+<label>KPAL <span style="color:#8b949e">（可选，保活。格式 范围:偏移:URL）</span></label>
+<input id="kpal" placeholder="60:60:https://xxx.ctonew.app" spellcheck="false">
+
+<label>KOMARI <span style="color:#8b949e">（可选，一次性安装命令，如 komari agent）</span></label>
+<input id="komari" placeholder="sh -c 'curl -sL ...install.sh | bash'" spellcheck="false">
+
+<button class="btn" onclick="generate()">生成部署文档</button>
+
+<div id="result" style="display:none">
+  <div class="row" style="margin-top:16px">
+    <textarea id="output" readonly spellcheck="false" onclick="this.select()"></textarea>
+    <button class="btn copy" onclick="copyOutput()">复制</button>
+  </div>
+  <p class="hint">点击文本全选，或点「复制」按钮。粘贴给 cto.new 的 AI agent 逐条执行即可。</p>
+</div>
+
+<script>
+function escapeMD(t){return t.replace(/_/g,'\\_').replace(/\*/g,'\\*')}
+
+function generate(){
+  const token=document.getElementById('cfToken').value.trim()
+  const port=document.getElementById('ttydPort').value.trim()||'7681'
+  const auth=document.getElementById('ttydAuth').value.trim()
+  const kpal=document.getElementById('kpal').value.trim()
+  const komari=document.getElementById('komari').value.trim()
+  let valid=true
+  if(!token){document.getElementById('errToken').style.display='block';valid=false}else{document.getElementById('errToken').style.display='none'}
+  if(!auth){document.getElementById('errAuth').style.display='block';valid=false}else{document.getElementById('errAuth').style.display='none'}
+  if(!valid)return
+
+  let md='# zvps 部署到 cto.new（执行指令，按顺序做）\n\n'
+  md+='## 步骤 1：创建 /home/team/shared/app.env\n\n'
+  md+='用 Write file 创建，内容如下：\n\n```\n'
+  md+='TTYD_PORT='+port+'\nTTYD_AUTH='+auth+'\nCF_TOKEN='+token+'\n'
+  md+='```\n\n'
+
+  md+='## 步骤 2：创建 /home/team/shared/install.sh\n\n用 Write file 创建，内容如下：\n\n```\n'
+  md+='#!/usr/bin/env bash\nset -e\ncd /home/team/shared\n'
+  md+='source /home/team/shared/app.env 2>/dev/null || true\n'
+  md+='TTYD_VERSION="1.7.7"\nARGO_VERSION="2026.3.0"\n'
+  md+='[ -x /usr/local/bin/td ] || { curl -sSL -o /usr/local/bin/td https://github.com/tsl0922/ttyd/releases/download/$TTYD_VERSION/ttyd.x86_64 && chmod +x /usr/local/bin/td; }\n'
+  md+='[ -x /usr/local/bin/cf ] || { curl -sSL -o /usr/local/bin/cf https://github.com/cloudflare/cloudflared/releases/download/$ARGO_VERSION/cloudflared-linux-amd64 && chmod +x /usr/local/bin/cf; }\n'
+  md+='pip install --break-system-packages supervisor 2>/dev/null || true\n'
+  md+='mkdir -p /etc/supervisor/conf.d /var/log/supervisor\n'
+  md+="cat > /etc/supervisor/conf.d/ttyd.conf <<'EOF'\n[program:ttyd]\n"
+  md+='command=/usr/local/bin/td -p '+port+' -W -c '+auth+' bash\n'
+  md+="autostart=true\nautorestart=true\nEOF\n"
+  md+="cat > /usr/local/bin/start-cloudflared.sh <<'SEOF'\n#!/bin/bash\n"
+  md+='source /home/team/shared/app.env 2>/dev/null || true\n'
+  md+='exec /usr/local/bin/cf tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${CF_TOKEN}"\n'
+  md+="SEOF\nchmod +x /usr/local/bin/start-cloudflared.sh\n"
+  md+="cat > /etc/supervisor/conf.d/cloudflared.conf <<'EOF'\n[program:cloudflared]\n"
+  md+='command=/usr/local/bin/start-cloudflared.sh\nautostart=true\nautorestart=true\nEOF\n'
+
+  if(kpal){
+    const parts=kpal.split(':')
+    const range=parts[0]||'300'
+    const offset=parts[1]||'60'
+    const url=parts.slice(2).join(':')
+    if(url){
+      md+="cat > /etc/supervisor/conf.d/kpal.conf <<'EOF'\n[program:kpal]\n"
+      md+='command=/bin/bash /usr/local/bin/kpal.sh\nautostart=true\nautorestart=true\nEOF\n'
+      md+="cat > /usr/local/bin/kpal.sh <<'SHEOF'\n#!/bin/bash\nRANGE="+range+'\nOFFSET='+offset+'\nURL="'+url+'"\n'
+      md+='while true; do\n  sleep $((RANDOM % RANGE + OFFSET))\n'
+      md+='  curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" >> /tmp/kpal.log 2>&1\ndone\nSHEOF\n'
+      md+='chmod +x /usr/local/bin/kpal.sh\n'
+    }
+  }
+
+  md+='pkill -f "/usr/local/bin/td" 2>/dev/null || true\n'
+  md+='pkill -f "/usr/local/bin/cf tunnel" 2>/dev/null || true\n'
+  md+='if pgrep -f "supervisord" >/dev/null 2>&1; then\n  supervisorctl update\nelse\n'
+  md+="  cat > /etc/supervisor/supervisord.conf <<'SEOF'\n"
+  md+='[unix_http_server]\nfile=/var/run/supervisor.sock\n[supervisord]\n'
+  md+='logfile=/var/log/supervisor/supervisord.log\npidfile=/var/run/supervisord.pid\n'
+  md+='childlogdir=/var/log/supervisor\n[rpcinterface:supervisor]\n'
+  md+='supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface\n'
+  md+='[supervisorctl]\nserverurl=unix:///var/run/supervisor.sock\n[include]\n'
+  md+='files = /etc/supervisor/conf.d/*.conf\nSEOF\n  supervisord -c /etc/supervisor/supervisord.conf &\n  sleep 2\nfi\n'
+  md+='sleep 2\ncurl -s -u '+auth+' -o /dev/null -w "ttyd: %{http_code}\\n" http://127.0.0.1:'+port+'/\n```\n\n'
+
+  if(komari){
+    md+='## （可选）安装 komari\n\n对 agent 说：\n\n```\nbash -c \''+komari+'\'\n```\n\n'
+  }
+
+  md+='## 步骤 3：执行安装\n\n对 agent 说：\n\n```\nbash /home/team/shared/install.sh\n```\n\n'
+  md+='## 步骤 4：验证\n\n对 agent 说：\n\n```\nsupervisorctl status\n'
+  md+='curl -s -u '+auth+' -o /dev/null -w "ttyd: %{http_code}\\n" http://127.0.0.1:'+port+'/\n```\n'
+
+  document.getElementById('output').value=md
+  document.getElementById('result').style.display='block'
+}
+
+function copyOutput(){
+  const ta=document.getElementById('output')
+  ta.select()
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    const btn=document.querySelector('.btn.copy')
+    btn.textContent='已复制'
+    setTimeout(()=>{btn.textContent='复制'},1500)
+  })
+}
+</script>
+</body>
+</html>
