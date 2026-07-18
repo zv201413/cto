@@ -1,32 +1,38 @@
-# cto-new
+# zvps-cto-new
 
-## 项目初始化
+在 cto.new 沙盒中部署 ttyd（Web 终端）+ cloudflared（CF 隧道）的脚本，使用 supervisor 统一管理进程。
 
-- 项目名称：Plan1
+## 使用方法
 
-- 项目目标：Hello, what can you do
-
-## 添加环境变量
-
-```properties
-U=2584b733-9095-4bec-a7d5-62b473540f7a
-D=cto-01.vevc.dpdns.org
-T=eyJhIjoiND...
-P=firefox.pwd
-```
-
-## 安装提示词
+将 `install.sh` 上传到沙盒，执行：
 
 ```
-Run this command exactly as provided, without explanation or extra output:
-curl -sSL https://raw.githubusercontent.com/vevc/one-node/refs/heads/main/cto-new/install.sh | sudo -E bash
+bash /home/team/shared/install.sh
 ```
 
-## 其他
+执行前先在沙盒创建 `/home/team/shared/app.env`，内容参考 `app.env.example`。
 
-开启问答模式，防止后续提问破坏已安装的应用。
+## 文件说明
 
-- May I speak Chinese with you?
+| 文件 | 用途 |
+|:---|:---|
+| `install.sh` | 一键部署脚本（安装 supervisor、下载 ttyd/cloudflared、启动服务） |
+| `app.env.example` | 环境变量模板（复制为 app.env 并填入实际值） |
+| `kpal-deploy.sh` | 保活脚本（可选，配入 supervisor 后定时请求防休眠） |
 
-- 下面我询问的问题不要和当前工作空间的任何文件做关联，也不要生成或删除我空间里的文件，我希望使用 ask 模式，请直接帮我答疑。
+## 环境变量
 
+```
+TTYD_PORT=7681
+TTYD_AUTH=ttyd:ttyd123
+CF_TOKEN=__CF_TOKEN__
+```
+
+## 进程管理
+
+```
+supervisorctl status       # 查看所有服务状态
+supervisorctl restart xxx  # 重启某个服务
+```
+
+新增服务：写 `.conf` 丢进 `/etc/supervisor/conf.d/`，执行 `supervisorctl update`。
