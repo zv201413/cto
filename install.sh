@@ -14,9 +14,9 @@ ARGO_VERSION="2026.3.0"
 pip install --break-system-packages supervisor 2>/dev/null || true
 mkdir -p /etc/supervisor/conf.d /var/log/supervisor
 
-cat > /etc/supervisor/conf.d/ttyd.conf <<'EOF'
+cat > /etc/supervisor/conf.d/ttyd.conf <<EOF
 [program:ttyd]
-command=/usr/local/bin/td -p 7681 -W -c ttyd:ttyd123 bash
+command=/usr/local/bin/td -p ${TTYD_PORT} -W -c ${TTYD_AUTH} bash
 autostart=true
 autorestart=true
 EOF
@@ -60,4 +60,4 @@ SEOF
 fi
 
 sleep 2
-curl -s -u ttyd:ttyd123 -o /dev/null -w "ttyd: %{http_code}\n" http://127.0.0.1:7681/
+curl -s -u ${TTYD_AUTH} -o /dev/null -w "ttyd: %{http_code}\n" http://127.0.0.1:${TTYD_PORT}/
